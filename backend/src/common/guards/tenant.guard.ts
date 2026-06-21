@@ -40,7 +40,8 @@ export class TenantGuard implements CanActivate {
       role: user.role,
     };
 
-    // If there is a condominiumId in the route params or body, validate it
+    if (user.role === 'SUPER_ADMIN') return true;
+
     const paramCondominiumId =
       request.params?.condominiumId || request.body?.condominiumId;
 

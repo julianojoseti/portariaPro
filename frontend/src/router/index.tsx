@@ -15,6 +15,9 @@ import AuditPage from '../pages/audit/AuditPage';
 import VisitorsPage from '../pages/visitors/VisitorsPage';
 import ServiceProvidersPage from '../pages/service-providers/ServiceProvidersPage';
 import VehiclesPage from '../pages/vehicles/VehiclesPage';
+import CompaniesPage from '../pages/admin/CompaniesPage';
+import CondominiumsAdminPage from '../pages/admin/CondominiumsAdminPage';
+import UsersAdminPage from '../pages/admin/UsersAdminPage';
 
 function RequireAuth() {
   const { isAuthenticated, user } = useAuthStore();
@@ -73,6 +76,9 @@ export const router = createBrowserRouter([
           { path: '/occurrences', element: <OccurrencesPage /> },
           { path: '/reports', element: <ReportsPage /> },
           { path: '/audit', element: <AuditPage /> },
+          { path: '/admin/companies', element: <CompaniesPage /> },
+          { path: '/admin/condominiums', element: <CondominiumsAdminPage /> },
+          { path: '/admin/users', element: <UsersAdminPage /> },
         ],
       },
     ],

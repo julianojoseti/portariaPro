@@ -5,6 +5,7 @@ import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { CompaniesModule } from './companies/companies.module';
 import { CondominiumsModule } from './condominiums/condominiums.module';
 import { UnitsModule } from './units/units.module';
 import { ResidentsModule } from './residents/residents.module';
@@ -24,6 +25,7 @@ import { AuditInterceptor } from './common/interceptors/audit.interceptor';
     PrismaModule,
     AuthModule,
     UsersModule,
+    CompaniesModule,
     CondominiumsModule,
     UnitsModule,
     ResidentsModule,

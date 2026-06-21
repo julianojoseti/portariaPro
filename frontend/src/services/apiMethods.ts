@@ -117,6 +117,22 @@ export const usersApi = {
   update: (id: string, data: Record<string, unknown>) =>
     api.patch(`/users/${id}`, data).then((r) => r.data),
   remove: (id: string) => api.delete(`/users/${id}`).then((r) => r.data),
+  assignCondominium: (userId: string, condominiumId: string) =>
+    api.post(`/users/${userId}/condominiums`, { condominiumId }).then((r) => r.data),
+  removeCondominium: (userId: string, condominiumId: string) =>
+    api.delete(`/users/${userId}/condominiums/${condominiumId}`).then((r) => r.data),
+};
+
+// ── Companies ────────────────────────────────────────────────
+export const companiesApi = {
+  list: (params?: Record<string, unknown>) =>
+    api.get('/companies', { params }).then((r) => r.data),
+  get: (id: string) => api.get(`/companies/${id}`).then((r) => r.data),
+  create: (data: Record<string, unknown>) =>
+    api.post('/companies', data).then((r) => r.data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/companies/${id}`, data).then((r) => r.data),
+  remove: (id: string) => api.delete(`/companies/${id}`).then((r) => r.data),
 };
 
 // ── Reports ───────────────────────────────────────────────────
