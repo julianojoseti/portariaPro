@@ -1,0 +1,685 @@
+// Portaria Pro — Prisma Schema
+// Multi-tenant: every operational table has companyId + condominiumId
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// TENANT ROOT
+// ─────────────────────────────────────────────
+
+model Company {
+  id        String    @id @default(uuid())
+  name      String
+  cnpj      String?   @unique
+  email     String?
+  phone     String?
+  logoUrl   String?
+  isActive  Boolean   @default(true)
+  plan      String    @default("basic")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  condominiums Condominium[]
+  users        User[]
+}
+
+model Condominium {
+  id          String    @id @default(uuid())
+  companyId   String
+  name        String
+  cnpj        String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  phone       String?
+  email       String?
+  syndicName  String?
+  syndicPhone String?
+  logoUrl     String?
+  isActive    Boolean   @default(true)
+  settings    Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  company          Company           @relation(fields: [companyId], references: [id])
+  units            Unit[]
+  users            UserCondominium[]
+  residents        Resident[]
+  visitors         Visitor[]
+  serviceProviders ServiceProvider[]
+  accessLogs       AccessLog[]
+  vehicles         Vehicle[]
+  packages         PackageDelivery[]
+  authorizations   Authorization[]
+  occurrences      Occurrence[]
+  notices          Notice[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+
+  @@index([companyId])
+}
+
+// ─────────────────────────────────────────────
+// USERS & RBAC
+// ─────────────────────────────────────────────
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  action      String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  companyId          String
+  roleId             String
+  name               String
+  email              String    @unique
+  passwordHash       String
+  phone              String?
+  photoUrl           String?
+  isActive           Boolean   @default(true)
+  mustChangePassword Boolean   @default(true)
+  lastLoginAt        DateTime?
+  lastLoginIp        String?
+  lastLoginAgent     String?
+  lgpdConsentAt      DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
+
+  company       Company           @relation(fields: [companyId], references: [id])
+  role          Role              @relation(fields: [roleId], references: [id])
+  condominiums  UserCondominium[]
+  refreshTokens RefreshToken[]
+  accessLogs    AccessLog[]
+  auditLogs     AuditLog[]
+  occurrences   Occurrence[]
+  notices       Notice[]
+
+  @@index([companyId])
+  @@index([email])
+}
+
+model UserCondominium {
+  id            String   @id @default(uuid())
+  userId        String
+  condominiumId String
+  companyId     String
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  condominium Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, condominiumId])
+  @@index([companyId, condominiumId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────
+// UNITS & RESIDENTS
+// ─────────────────────────────────────────────
+
+model Unit {
+  id            String    @id @default(uuid())
+  companyId     String
+  condominiumId String
+  block         String?
+  number        String
+  type          String    @default("apartment")
+  floor         Int?
+  parkingSpots  Int       @default(0)
+  observations  String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdById   String?
+  updatedById   String?
+
+  condominium      Condominium       @relation(fields: [condominiumId], references: [id])
+  residents        Resident[]
+  visitors         Visitor[]
+  serviceProviders ServiceProvider[]
+  vehicles         Vehicle[]
+  packages         PackageDelivery[]
+  authorizations   Authorization[]
+  occurrences      Occurrence[]
+
+  @@unique([condominiumId, block, number])
+  @@index([companyId, condominiumId])
+}
+
+model Resident {
+  id                   String       @id @default(uuid())
+  companyId            String
+  condominiumId        String
+  unitId               String
+  name                 String
+  document             String?
+  rg                   String?
+  email                String?
+  phone                String?
+  phone2               String?
+  photoUrl             String?
+  type                 ResidentType @default(OWNER)
+  startDate            DateTime?
+  endDate              DateTime?
+  canAuthorizeVisitors Boolean      @default(true)
+  observations         String?
+  isActive             Boolean      @default(true)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  deletedAt            DateTime?
+  createdById          String?
+  updatedById          String?
+
+  condominium    Condominium     @relation(fields: [condominiumId], references: [id])
+  unit           Unit            @relation(fields: [unitId], references: [id])
+  vehicles       Vehicle[]
+  authorizations Authorization[]
+
+  @@index([companyId, condominiumId])
+  @@index([document])
+  @@index([unitId])
+}
+
+enum ResidentType {
+  OWNER
+  TENANT
+  DEPENDENT
+  DOMESTIC_EMPLOYEE
+}
+
+// ─────────────────────────────────────────────
+// VISITORS & SERVICE PROVIDERS
+// ─────────────────────────────────────────────
+
+model Visitor {
+  id                    String    @id @default(uuid())
+  companyId             String
+  condominiumId         String
+  unitId                String
+  responsibleResidentId String?
+  name                  String
+  document              String?
+  phone                 String?
+  photoUrl              String?
+  vehiclePlate          String?
+  purpose               String?
+  isRecurrent           Boolean   @default(false)
+  validUntil            DateTime?
+  observations          String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
+  createdById           String?
+  updatedById           String?
+
+  condominium    Condominium     @relation(fields: [condominiumId], references: [id])
+  unit           Unit            @relation(fields: [unitId], references: [id])
+  accessLogs     AccessLog[]
+  authorizations Authorization[]
+
+  @@index([companyId, condominiumId])
+  @@index([document])
+  @@index([vehiclePlate])
+}
+
+model ServiceProvider {
+  id                    String    @id @default(uuid())
+  companyId             String
+  condominiumId         String
+  unitId                String?
+  responsibleResidentId String?
+  name                  String
+  company               String?
+  document              String?
+  phone                 String?
+  photoUrl              String?
+  serviceType           String?
+  vehiclePlate          String?
+  isRecurrent           Boolean   @default(false)
+  validUntil            DateTime?
+  isBlocked             Boolean   @default(false)
+  blockReason           String?
+  observations          String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
+  createdById           String?
+  updatedById           String?
+
+  condominium    Condominium     @relation(fields: [condominiumId], references: [id])
+  unit           Unit?           @relation(fields: [unitId], references: [id])
+  accessLogs     AccessLog[]
+  authorizations Authorization[]
+
+  @@index([companyId, condominiumId])
+  @@index([document])
+  @@index([vehiclePlate])
+}
+
+// ─────────────────────────────────────────────
+// ACCESS LOG
+// ─────────────────────────────────────────────
+
+model AccessLog {
+  id                String       @id @default(uuid())
+  companyId         String
+  condominiumId     String
+  unitId            String?
+  personType        PersonType
+  visitorId         String?
+  serviceProviderId String?
+  residentId        String?
+  personName        String
+  personDocument    String?
+  vehiclePlate      String?
+  purpose           String?
+  photoUrl          String?
+  status            AccessStatus @default(WAITING)
+  entryAt           DateTime?
+  exitAt            DateTime?
+  authorizedById    String?
+  deniedReason      String?
+  operatorId        String
+  observations      String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  createdById       String?
+  updatedById       String?
+
+  condominium     Condominium      @relation(fields: [condominiumId], references: [id])
+  visitor         Visitor?         @relation(fields: [visitorId], references: [id])
+  serviceProvider ServiceProvider? @relation(fields: [serviceProviderId], references: [id])
+  operator        User             @relation(fields: [operatorId], references: [id])
+
+  @@index([companyId, condominiumId])
+  @@index([status])
+  @@index([entryAt])
+  @@index([personDocument])
+  @@index([vehiclePlate])
+}
+
+enum PersonType {
+  VISITOR
+  SERVICE_PROVIDER
+  RESIDENT
+  EMPLOYEE
+  DELIVERY
+  OTHER
+}
+
+enum AccessStatus {
+  WAITING
+  AUTHORIZED
+  INSIDE
+  FINISHED
+  DENIED
+}
+
+// ─────────────────────────────────────────────
+// VEHICLES
+// ─────────────────────────────────────────────
+
+model Vehicle {
+  id            String      @id @default(uuid())
+  companyId     String
+  condominiumId String
+  unitId        String?
+  residentId    String?
+  plate         String
+  model         String?
+  brand         String?
+  color         String?
+  type          VehicleType @default(CAR)
+  parkingSpot   String?
+  isBlocked     Boolean     @default(false)
+  blockReason   String?
+  observations  String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+  createdById   String?
+  updatedById   String?
+
+  condominium Condominium @relation(fields: [condominiumId], references: [id])
+  unit        Unit?       @relation(fields: [unitId], references: [id])
+  resident    Resident?   @relation(fields: [residentId], references: [id])
+
+  @@index([companyId, condominiumId])
+  @@index([plate])
+}
+
+enum VehicleType {
+  CAR
+  MOTORCYCLE
+  TRUCK
+  VAN
+  OTHER
+}
+
+// ─────────────────────────────────────────────
+// PACKAGE DELIVERY
+// ─────────────────────────────────────────────
+
+model PackageDelivery {
+  id              String        @id @default(uuid())
+  companyId       String
+  condominiumId   String
+  unitId          String
+  recipientName   String
+  carrier         String?
+  trackingCode    String?
+  packageType     String?
+  photoUrl        String?
+  observations    String?
+  status          PackageStatus @default(RECEIVED)
+  receivedAt      DateTime      @default(now())
+  notifiedAt      DateTime?
+  retrievedAt     DateTime?
+  retrievedById   String?
+  retrievedByName String?
+  returnedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+  createdById     String?
+  updatedById     String?
+
+  condominium Condominium @relation(fields: [condominiumId], references: [id])
+  unit        Unit        @relation(fields: [unitId], references: [id])
+
+  @@index([companyId, condominiumId])
+  @@index([status])
+  @@index([unitId])
+}
+
+enum PackageStatus {
+  RECEIVED
+  WAITING_PICKUP
+  RETRIEVED
+  RETURNED
+}
+
+// ─────────────────────────────────────────────
+// AUTHORIZATIONS
+// ─────────────────────────────────────────────
+
+model Authorization {
+  id                String              @id @default(uuid())
+  companyId         String
+  condominiumId     String
+  unitId            String
+  residentId        String?
+  visitorId         String?
+  serviceProviderId String?
+  personName        String
+  personDocument    String?
+  personPhone       String?
+  validFrom         DateTime
+  validUntil        DateTime?
+  daysOfWeek        Int[]
+  timeFrom          String?
+  timeTo            String?
+  observations      String?
+  status            AuthorizationStatus @default(ACTIVE)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  deletedAt         DateTime?
+  createdById       String?
+  updatedById       String?
+
+  condominium     Condominium      @relation(fields: [condominiumId], references: [id])
+  unit            Unit             @relation(fields: [unitId], references: [id])
+  resident        Resident?        @relation(fields: [residentId], references: [id])
+  visitor         Visitor?         @relation(fields: [visitorId], references: [id])
+  serviceProvider ServiceProvider? @relation(fields: [serviceProviderId], references: [id])
+
+  @@index([companyId, condominiumId])
+  @@index([status])
+  @@index([validUntil])
+}
+
+enum AuthorizationStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+// ─────────────────────────────────────────────
+// OCCURRENCES
+// ─────────────────────────────────────────────
+
+model Occurrence {
+  id             String             @id @default(uuid())
+  companyId      String
+  condominiumId  String
+  unitId         String?
+  type           String
+  title          String
+  description    String
+  priority       OccurrencePriority @default(MEDIUM)
+  status         OccurrenceStatus   @default(OPEN)
+  involvedPeople String?
+  reportedById   String
+  assignedToId   String?
+  resolvedAt     DateTime?
+  resolutionNote String?
+  observations   String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
+  createdById    String?
+  updatedById    String?
+
+  condominium Condominium         @relation(fields: [condominiumId], references: [id])
+  unit        Unit?               @relation(fields: [unitId], references: [id])
+  reportedBy  User                @relation(fields: [reportedById], references: [id])
+  attachments Attachment[]
+  comments    OccurrenceComment[]
+
+  @@index([companyId, condominiumId])
+  @@index([status])
+  @@index([priority])
+}
+
+enum OccurrencePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum OccurrenceStatus {
+  OPEN
+  IN_ANALYSIS
+  RESOLVED
+}
+
+model OccurrenceComment {
+  id           String   @id @default(uuid())
+  occurrenceId String
+  userId       String
+  content      String
+  isInternal   Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  occurrence Occurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// NOTICES
+// ─────────────────────────────────────────────
+
+model Notice {
+  id            String    @id @default(uuid())
+  companyId     String
+  condominiumId String
+  title         String
+  content       String
+  targetType    String    @default("ALL")
+  targetValue   String?
+  publishedAt   DateTime?
+  expiresAt     DateTime?
+  requiresRead  Boolean   @default(false)
+  authorId      String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  condominium Condominium  @relation(fields: [condominiumId], references: [id])
+  author      User         @relation(fields: [authorId], references: [id])
+  attachments Attachment[]
+  reads       NoticeRead[]
+
+  @@index([companyId, condominiumId])
+}
+
+model NoticeRead {
+  id       String   @id @default(uuid())
+  noticeId String
+  userId   String
+  readAt   DateTime @default(now())
+
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  @@unique([noticeId, userId])
+}
+
+// ─────────────────────────────────────────────
+// ATTACHMENTS
+// ─────────────────────────────────────────────
+
+model Attachment {
+  id            String   @id @default(uuid())
+  companyId     String
+  condominiumId String
+  entity        String
+  entityId      String
+  filename      String
+  url           String
+  mimeType      String?
+  size          Int?
+  uploadedById  String?
+  createdAt     DateTime @default(now())
+
+  occurrence Occurrence? @relation(fields: [entityId], references: [id], map: "attachment_occurrence_fk")
+  notice     Notice?     @relation(fields: [entityId], references: [id], map: "attachment_notice_fk")
+
+  @@index([companyId, condominiumId])
+  @@index([entity, entityId])
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id            String    @id @default(uuid())
+  companyId     String
+  condominiumId String?
+  userId        String?
+  entity        String
+  entityId      String?
+  action        String
+  beforeData    Json?
+  afterData     Json?
+  ip            String?
+  userAgent     String?
+  createdAt     DateTime  @default(now())
+
+  condominium Condominium? @relation(fields: [condominiumId], references: [id])
+  user        User?        @relation(fields: [userId], references: [id])
+
+  @@index([companyId, condominiumId])
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────
+
+model Notification {
+  id            String           @id @default(uuid())
+  companyId     String
+  condominiumId String
+  userId        String
+  type          NotificationType
+  title         String
+  body          String
+  entityId      String?
+  entityType    String?
+  isRead        Boolean          @default(false)
+  readAt        DateTime?
+  sentAt        DateTime?
+  channel       String           @default("in_app")
+  createdAt     DateTime         @default(now())
+
+  condominium Condominium @relation(fields: [condominiumId], references: [id])
+
+  @@index([companyId, condominiumId])
+  @@index([userId, isRead])
+}
+
+enum NotificationType {
+  PACKAGE_RECEIVED
+  VISITOR_WAITING
+  SERVICE_PROVIDER_ARRIVED
+  OCCURRENCE_REGISTERED
+  NOTICE_PUBLISHED
+  AUTHORIZATION_EXPIRING
+  ACCESS_DENIED
+  SYSTEM
+}
