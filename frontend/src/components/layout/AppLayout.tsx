@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, DoorOpen, Users, Building2, UserCheck,
-  Wrench, Car, Package, AlertTriangle,
+  LayoutDashboard, DoorOpen, Users, Building2,
+  Package, AlertTriangle,
   BarChart3, ShieldCheck, LogOut, Menu, X, Bell, ChevronDown,
   Building, Settings, UserCog,
 } from 'lucide-react';
@@ -14,9 +14,6 @@ const navItems = [
   { to: '/access', label: 'Portaria', icon: DoorOpen },
   { to: '/residents', label: 'Moradores', icon: Users },
   { to: '/units', label: 'Unidades', icon: Building2 },
-  { to: '/visitors', label: 'Visitantes', icon: UserCheck },
-  { to: '/service-providers', label: 'Prestadores', icon: Wrench },
-  { to: '/vehicles', label: 'Veículos', icon: Car },
   { to: '/packages', label: 'Encomendas', icon: Package },
   { to: '/occurrences', label: 'Ocorrências', icon: AlertTriangle },
   { to: '/reports', label: 'Relatórios', icon: BarChart3 },

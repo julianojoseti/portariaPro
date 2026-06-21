@@ -12,9 +12,6 @@ import PackagesPage from '../pages/packages/PackagesPage';
 import OccurrencesPage from '../pages/occurrences/OccurrencesPage';
 import ReportsPage from '../pages/reports/ReportsPage';
 import AuditPage from '../pages/audit/AuditPage';
-import VisitorsPage from '../pages/visitors/VisitorsPage';
-import ServiceProvidersPage from '../pages/service-providers/ServiceProvidersPage';
-import VehiclesPage from '../pages/vehicles/VehiclesPage';
 import CompaniesPage from '../pages/admin/CompaniesPage';
 import CondominiumsAdminPage from '../pages/admin/CondominiumsAdminPage';
 import UsersAdminPage from '../pages/admin/UsersAdminPage';
@@ -69,9 +66,6 @@ export const router = createBrowserRouter([
           { path: '/access', element: <AccessPage /> },
           { path: '/residents', element: <ResidentsPage /> },
           { path: '/units', element: <UnitsPage /> },
-          { path: '/visitors', element: <VisitorsPage /> },
-          { path: '/service-providers', element: <ServiceProvidersPage /> },
-          { path: '/vehicles', element: <VehiclesPage /> },
           { path: '/packages', element: <PackagesPage /> },
           { path: '/occurrences', element: <OccurrencesPage /> },
           { path: '/reports', element: <ReportsPage /> },
